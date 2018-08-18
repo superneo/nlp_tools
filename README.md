@@ -3,6 +3,19 @@
 A set of self-customized tools for NLP research/development activities.<br/>
 This project comforms to the [Udacity Git Commit Message Style Guide](https://udacity.github.io/git-styleguide/).
 
+# Regex references
+## Regex bible
+  * [Regular-Expressions.info](https://www.regular-expressions.info/)
+## Online regex tester and debugger
+  * [regex101.com](https://regex101.com/)
+
+## Unicode regex/property/script/block
+  * https://www.regular-expressions.info/unicode.html
+
+# Perl references
+## Perl Special Variables Quick Reference
+  * http://www.perlmonks.org/?node_id=353259
+
 # Korean corpus references
 ## 국립국어원 언어정보나눔터
   * https://ithub.korean.go.kr/
