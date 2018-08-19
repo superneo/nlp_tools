@@ -36,8 +36,6 @@ opendir(CLEANED_CORPORA_DIR, $cleaned_corpora_dir)
 
 my @raw_corpora = grep {-f "$raw_corpora_dir/$_" && /^.*\.txt$/} readdir(RAW_CORPORA_DIR);
 
-open(my $tagfh, ">>:encoding(UTF-8)", "/Users/neo/raw_corpus/korean_go_kr/tagTexts.txt");
-
 foreach my $corpus (@raw_corpora) {
     print "[processing file] $corpus\n";
 
@@ -49,21 +47,21 @@ foreach my $corpus (@raw_corpora) {
     while (my $line = <$ifh>) {
         next if ($line !~ m/\p{InHangul_Syllables}/);
         chomp $line;
-
-        my @tagTexts = $line =~ m/<[\/]?([^<\/>]+)[\/]?>/g;
-        foreach my $tagText (@tagTexts) {
-        	next if ($tagText =~ m/^\p{Han}+$/);  # exclude if chinese letters only
-            print $tagfh (trim $tagText)."\n";
-        }
+        $line = decode_entities($line);
 
         # text cleaning
+        $line =~ s/::+//g;  # for cases like "그~ 김치후선생::이"
+        $line =~ s/(\p{InHangul_Syllables})~([\s\p{P}])/$1$2/g;  # for cases like "인민들과 만나지 않고 이~ 저::~,"
+        $line =~ s/(\p{L})_(\p{L})/$1$2/g;
         $line =~ s/<[^<>]+$|^[^<>]+>//g;
-        $line =~ s/<(([^<>\p{InHangul_Syllables}]*[\p{InHangul_Syllables}]+[^<>\p{InHangul_Syllables}]*)+)>/$1/g;
+        $line =~ s/<[^\"<>]*\"((?:[^\"\p{InHangul_Syllables}]*\p{InHangul_Syllables}+[^\"\p{InHangul_Syllables}]*)+)\"[^\"<>]*>/$1/g;
+        $line =~ s/<((?:[^<\/>\p{InHangul_Syllables}]*\p{InHangul_Syllables}+[^<\/>\p{InHangul_Syllables}]*)+)>/$1/g;
         $line =~ s/<[^<>]+>//g;
         $line =~ s/ / /g;  # nbsp
         $line =~ s/\x{FEFF}//g;  # zero width nbsp
-        $line = trim $line;
         $line =~ s/ +/ /g;
+        $line = trim $line;
+        $line =~ s/\,$//;  # for only colloquial corpora
         next if ($line =~ m/^\s*$/);
 
         print $ofh $line."\n";
@@ -72,8 +70,6 @@ foreach my $corpus (@raw_corpora) {
     close($ofh);
     close($ifh);
 }
-
-close($tagfh);
 
 closedir(CLEANED_CORPORA_DIR);
 closedir(RAW_CORPORA_DIR);
