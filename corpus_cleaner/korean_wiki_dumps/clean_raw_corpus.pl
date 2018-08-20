@@ -6,6 +6,7 @@ use utf8;
 use HTML::Entities;
 use Encode qw/encode decode/;
 use File::Path 'rmtree';
+use Regexp::Common qw(URI);
 
 sub trim { my $s = shift; $s =~ s/^\s+|\s+$//g; return $s };
 
@@ -35,8 +36,8 @@ opendir(CLEANED_CORPUS_DIR, $cleaned_corpus_dir)
     or die "[ERROR] failed to open $cleaned_corpus_dir: $!\n";
 
 open(RAW_CORPUS, "<:encoding(UTF-8)",
-    "$raw_corpus_dir/20180802_kowiki-latest-pages-articles.xml")
-    or die "[ERROR] failed to open 20180802_kowiki-latest-pages-articles.xml: $!\n";
+    "$raw_corpus_dir/kowiki-latest-pages-articles.xml")
+    or die "[ERROR] failed to open kowiki-latest-pages-articles.xml: $!\n";
 open(CLEANED_CORPUS, ">:encoding(UTF-8)",
     "$cleaned_corpus_dir/cleaned_korean_wiki_dumps.txt")
     or die "[ERROR] failed to open cleaned_korean_wiki_dumps.txt: $!\n";
@@ -50,6 +51,13 @@ while (my $line = <RAW_CORPUS>) {
     $line = decode_entities($line);
 
     # text cleaning
+    $line =~ s/$RE{URI}{HTTP}//g;  # delete all URLs matched
+    $line =~ s/\[\[([^\|\[\]]+)\|([^\|\[\]]+)\]\]/$1 $2/g;
+    $line =~ s/\[\[([^\[\]]+)\]\]/$1/g;
+    $line =~ s/(^!)?colspan[^!\|\p{Hangul}]+\|//g;
+    $line =~ s/'''([^\']+)'''/$1/g;
+    $line =~ s/(\|\|\s*\d+\s*)+//g;
+    $line =~ s/(\p{InHangul_Syllables})_(\p{InHangul_Syllables})/$1 $2/g;
     $line =~ s/<[^<>]+$|^[^<>]+>//g;
     $line =~ s/<[^<>]+>//g;
     $line =~ s/ / /g;  # nbsp
