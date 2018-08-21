@@ -8,7 +8,7 @@ use Encode qw/encode decode/;
 use File::Path 'rmtree';
 use Regexp::Common qw(URI);
 
-sub trim { my $s = shift; $s =~ s/^\s+|\s+$//g; return $s };
+sub trim { my $s = shift; $s =~ s/^\s+|\s+$//g; return $s; };
 
 binmode STDIN, ":utf8";
 binmode STDOUT, ":utf8";
@@ -47,23 +47,54 @@ my $cleaned_lines = 0;
 while (my $line = <RAW_CORPUS>) {
     $raw_lines++;
     next if ($line !~ m/\p{InHangul_Syllables}/);
+
+    $line =~ s/^!(\p{InHangul_Syllables}+)/$1/;  # TODO
+    $line =~ s/^#(\p{InHangul_Syllables}+)/$1/;  # TODO
+    $line =~ s/^\(([^\(\)]+)\)$/$1/;
+
+    # pass if with leading ! # $ % &
+    next if ($line =~ m/^[!#\$%&]/);
+    next if ($line =~ m/'[^']+'\s*:\s*/);
+
+    # leading double quot(")
+    $line =~ s/^\"([^\"]+)\"\s*:\s*\{.*$/$1/;
+
+    next if ($line =~ m/^\{\{인용문\|/);
     chomp $line;
+    $line =~ s/$RE{URI}{HTTP}//g;  # delete all URLs matched
     $line = decode_entities($line);
+    $line = decode_entities($line);  # for double-encoded cases
 
     # text cleaning
-    $line =~ s/$RE{URI}{HTTP}//g;  # delete all URLs matched
-    $line =~ s/\[\[([^\|\[\]]+)\|([^\|\[\]]+)\]\]/$1 $2/g;
-    $line =~ s/\[\[([^\[\]]+)\]\]/$1/g;
-    $line =~ s/(^!)?colspan[^!\|\p{Hangul}]+\|//g;
-    $line =~ s/'''([^\']+)'''/$1/g;
-    $line =~ s/(\|\|\s*\d+\s*)+//g;
+    #$line =~ s/\[\[([^\|\[\]]+)\|([^\|\[\]]+)\]\]/$1 $2/g;
+    #$line =~ s/\[\[([^\[\]]+)\]\]/$1/g;
+    #$line =~ s/(^!)?colspan[^!\|\p{Hangul}]+\|//g;
+    $line =~ s/\[\[[^\[\]]*\]\]//g;
+    $line =~ s/\{\{[^\{\}]*\}\}//g;
+    $line =~ s/'''?([^']*)'''?/$1/g;
+    #$line =~ s/(\|\|\s*\d+\s*)+//g;
     $line =~ s/(\p{InHangul_Syllables})_(\p{InHangul_Syllables})/$1 $2/g;
     $line =~ s/<[^<>]+$|^[^<>]+>//g;
     $line =~ s/<[^<>]+>//g;
     $line =~ s/ / /g;  # nbsp
     $line =~ s/\x{FEFF}//g;  # zero width nbsp
     $line =~ s/ +/ /g;
+=pod
+    $line =~ s/!!/\n/g;
+    $line =~ s/ \||\| /\n/g;
+    $line =~ s/ *\n */\n/g;
+    my @lines = split /\n/, $line;
+    $line = "";
+    foreach my $token (@lines) {
+        next if ($token !~ m/\p{InHangul_Syllables}/);
+        $token =~ s/ +/ /g;
+        $token =~ s/^(! )+//;
+        $token = trim $token;
+        $line = $line."\n".$token;
+    }
+=cut
     $line = trim $line;
+    next if ($line !~ m/\p{InHangul_Syllables}/);
     next if ($line =~ m/^\s*$/);
 
     print CLEANED_CORPUS $line."\n";
