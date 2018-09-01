@@ -89,6 +89,12 @@ std::string wcs_to_mbs(const std::wstring& str, const std::locale& loc = std::lo
     return std::string(&buf[0]);
 }
 
+bool isHangulSyllable(const std::string& mbsLetter) {
+    const std::wstring& wcsLetter = mbs_to_wcs(mbsLetter);
+    const wchar_t* wcpChar = wcsLetter.c_str();
+    return 0xAC00 <= *wcpChar && *wcpChar <= 0xD7A3;  // between '가' and '힣'
+}
+
 int main(void) {
     std::locale::global(std::locale("ko_KR.UTF-8"));
 
@@ -116,7 +122,7 @@ int main(void) {
     wprintf(L"(wprintf) %S\n", buffer);  // both %ls & %S work the same
     wprintf(L"(wprintf) %ls\n", buffer);
 
-    std::cout << "[unicode code range test]" << std::endl;
+    std::cout << std::endl << "[unicode code range test]" << std::endl;
     std::wstring wchr = mbs_to_wcs("ㅋ");
     str = wchr.c_str();
     wprintf(L"(char) %ls\n", str);
@@ -124,6 +130,10 @@ int main(void) {
     // reference: http://www.unicode.org/charts/PDF/U3130.pdf
     // (Hangul Compatibility Jamo unicode character code table)
     std::cout << (bool)(0x3131 <= *str && *str <= 0x318E) << std::endl;
+
+    std::cout << std::endl << "[Hangul syllable test]" << std::endl;
+    std::string letter = "뷁";
+    std::cout <<"Is " << letter << " a korean letter? " << isHangulSyllable(letter) << std::endl;
 
     return 0;
 }
