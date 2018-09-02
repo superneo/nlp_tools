@@ -95,6 +95,11 @@ bool isHangulSyllable(const std::string& mbsLetter) {
     return 0xAC00 <= *wcpChar && *wcpChar <= 0xD7A3;  // between '가' and '힣'
 }
 
+const wchar_t& getLastWStrChar(const std::string& mbsStr) {
+    const std::wstring& wStr = mbs_to_wcs(mbsStr);
+    return wStr[wStr.size() - 1];
+}
+
 int main(void) {
     std::locale::global(std::locale("ko_KR.UTF-8"));
 
@@ -102,7 +107,7 @@ int main(void) {
     wprintf(L"%ls\n", tmpWchar);
     wprintf(L"%#x\n", *tmpWchar);
 
-    std::string mbs_str1 = "__label__0 tv 전기세가 아깝다!!!ㅋㅋ-_-'(越不聰明越快活)any";
+    std::string mbs_str1 = "__label__0 tv 전기세가 아깝다!!!ㅋㅋ-_-'(越不聰明越快活)any가";
     std::wstring wcs_str1 = mbs_to_wcs(mbs_str1);
     std::string mbs_str2 = wcs_to_mbs(wcs_str1);
     std::wstring wcs_str2 = mbs_to_wcs(mbs_str2);
@@ -131,9 +136,18 @@ int main(void) {
     // (Hangul Compatibility Jamo unicode character code table)
     std::cout << (bool)(0x3131 <= *str && *str <= 0x318E) << std::endl;
 
-    std::cout << std::endl << "[Hangul syllable test]" << std::endl;
+    std::cout << std::endl << "[Hangul syllable test 1]" << std::endl;
     std::string letter = "뷁";
     std::cout <<"Is " << letter << " a korean letter? " << isHangulSyllable(letter) << std::endl;
+
+    std::cout << std::endl << "[Hangul syllable test 2]" << std::endl;
+    std::cout << "wcs_str2.size():" << wcs_str2.size() << std::endl;
+    wprintf(L"wcs_str2: %ls\n", wcs_str2.c_str());
+    std::cout << "(cout) wcs_str2 last character: " << wcs_str2[wcs_str2.size() - 1] << std::endl;
+    wprintf(L"(wprintf) wcs_str2 last character: %ls(%#X)\n",
+        &(wcs_str2[wcs_str2.size() - 1]), wcs_str2[wcs_str2.size() - 1]);
+    std::cout << "0xAC00 <= getLastWStrChar(mbs_str1) && getLastWStrChar(mbs_str1) <= 0xD7A3: "
+              << (0xAC00 <= getLastWStrChar(mbs_str1) && getLastWStrChar(mbs_str1)) << std::endl;
 
     return 0;
 }
