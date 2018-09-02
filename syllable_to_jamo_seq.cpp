@@ -100,6 +100,12 @@ const wchar_t& getLastWStrChar(const std::string& mbsStr) {
     return wStr[wStr.size() - 1];
 }
 
+bool isLastCharKoreanSyllable(const std::string& mbsStr) {
+    const std::wstring& wStr = mbs_to_wcs(mbsStr);
+    const wchar_t& wChar = wStr[wStr.size() - 1];
+    return 0xAC00 <= wChar && wChar <= 0xD7A3;  // between '가' and '힣'
+}
+
 int main(void) {
     std::locale::global(std::locale("ko_KR.UTF-8"));
 
@@ -148,6 +154,7 @@ int main(void) {
         &(wcs_str2[wcs_str2.size() - 1]), wcs_str2[wcs_str2.size() - 1]);
     std::cout << "0xAC00 <= getLastWStrChar(mbs_str1) && getLastWStrChar(mbs_str1) <= 0xD7A3: "
               << (0xAC00 <= getLastWStrChar(mbs_str1) && getLastWStrChar(mbs_str1)) << std::endl;
+    std::cout << "isLastCharKoreanSyllable(mbs_str1): " << isLastCharKoreanSyllable(mbs_str1) << std::endl;
 
     return 0;
 }
