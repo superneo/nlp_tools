@@ -4,7 +4,7 @@
 #include <locale>
 
 // reference: https://social.msdn.microsoft.com/Forums/vstudio/ko-KR/991e9328-0fe7-43a1-9eb4-eee5ff04aac7/5462044544-52488-51473-5133349457-48516475325461644592?forum=visualcplusko
-unsigned int BreakHan(const wchar_t* str, wchar_t* buffer, unsigned int nSize)
+size_t break_hangul_syllables(const wchar_t* str, wchar_t* buffer, size_t nSize)
 {
     //초성
     static const wchar_t wcHead[] = {
@@ -32,7 +32,9 @@ unsigned int BreakHan(const wchar_t* str, wchar_t* buffer, unsigned int nSize)
         L'ㅆ', L'ㅇ', L'ㅈ', L'ㅊ',
         L'ㅋ', L'ㅌ', L'ㅍ', L'ㅎ'};
 
-    unsigned int pos = 0;
+    size_t pos = 0;
+
+    std::fill(buffer, buffer + nSize, '\0');
 
     while(*str != '\0') {
         if (0xAC00 <= *str && *str <= 0xD7A3) {  // between '가' and '힣'
@@ -127,7 +129,7 @@ int main(void) {
 
     wchar_t buffer[4096];
 
-    BreakHan(str, buffer, sizeof buffer);
+    break_hangul_syllables(str, buffer, sizeof buffer / sizeof(wchar_t));
     printf("(printf) %S\n", buffer);
     printf("(printf) %ls\n", buffer);
     wprintf(L"(wprintf) %S\n", buffer);  // both %ls & %S work the same
