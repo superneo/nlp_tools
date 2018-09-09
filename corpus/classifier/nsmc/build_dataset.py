@@ -62,8 +62,11 @@ def make_corpus_files(input_file, output_dir, threshold):
         line = inf.readline()
         if not line:
             break
-        line_cnt += 1
         tokens = line.strip().split('\t')
+        if len(tokens) != 3:
+            print("[Warning] invalid corpus line found: <" + line + ">")
+            continue
+        line_cnt += 1
         corpus_lines[int(tokens[2])].append(tokens[2] + '\t' + tokens[1])
     print("# total corpus lines: " + str(line_cnt))
     inf.close()
