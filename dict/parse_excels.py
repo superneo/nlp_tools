@@ -10,6 +10,7 @@ import sys
 
 
 CHAR_FILTER = {
+    # part 1: invisible/unprintable characters(mostly)
     '\x7f': '',     # (DEL -> '')
     '\x87': '',     # ('‡' -> '')
     '\xa0': ' ',    # (NBSP -> space)
@@ -22,143 +23,149 @@ CHAR_FILTER = {
     '\u202d': '',   # (left-to-right override -> '')
     '\u2116': '',   # (№(numero) -> '')
     '\u3000': ' ',  # (ideographic space -> ' ')
+    '\u302e': '',   # (HANGUL SINGLE DOT TONE MARK -> '')
     '\u3164': '',   # (hangul filler -> '')
     '\ufe0f': '',   # ('࿾' -> '')
-    '\ufeff': ''    # (ZERO WIDTH NO-BREAK SPACE/BYTE ORDER MARK -> '')
+    '\ufeff': '',   # (ZERO WIDTH NO-BREAK SPACE/BYTE ORDER MARK -> '')
+    # part 2: non-ascii/non-alphanumeric characters(visible mostly)
+    '˙': ' ',
+    '˜': '~',
+    '˝': '"',
+    '\u030a': '',	# (combining ring above -> '')  # '̊': '˚',
+    '·': '·',
+    '‐': '-',
+    '‑': '-',
+    '–': '-',
+    '—': '-',
+    '―': '-',
+    '‘': '\'',
+    '’': '\'',
+    '“': '"',
+    '”': '"',
+    '•': '·',
+    '․': '·',
+    '…': '..',
+    '‧': '·',
+    '‰': '%',
+    '′': '\'',
+    '″': '"',
+    '‵': '\'',
+    '⁄': '/',
+    '₁': '1',
+    '₂': '2',
+    '₃': '3',
+    '→': '->',
+    '∕': '/',
+    '∙': '·',
+    '∪': 'U',
+    '∼': '~',
+    '≪': '<',
+    '≫': '>',
+    'ⓛ': '(1)',
+    '┃': '|',
+    '□': 'O',
+    '○': 'o',
+    '★': '*',
+    '☆': '*',
+    '♥': '♡',
+    '➡': '->',
+    '⟪': '<',
+    '⟫': '>',
+    '〃': '"',
+    '〈': '<',
+    '〉': '>',
+    '《': '<',
+    '》': '>',
+    '「': '<',
+    '」': '>',
+    '『': '<',
+    '』': '>',
+    '【': '<',
+    '】': '>',
+    '〔': '[',
+    '〕': ']',
+    '〜': '~',
+    '゜': '°',
+    '・': '·',
+    '㈔': '(사)',
+    '㈜': '(주)',
+    '㍱': 'hPa',
+    '㎃': 'mA',
+    '㎈': 'cal',
+    '㎉': 'kcal',
+    '㎎': 'mg',
+    '㎏': 'kg',
+    '㎐': 'Hz',
+    '㎑': 'kHz',
+    '㎒': 'MHZ',
+    '㎓': 'GHz',
+    '㎔': 'THz',
+    '㎖': 'ml',
+    '㎗': 'dl',
+    '㎘': 'kl',
+    '㎚': 'nm',
+    '㎜': 'mm',
+    '㎝': 'cm',
+    '㎞': 'km',
+    '㎟': 'sq mm',
+    '㎠': 'sq cm',
+    '㎡': 'sq m',
+    '㎢': 'sq km',
+    '㎥': 'cube m',
+    '㎧': 'm/s',
+    '㎨': 'm/sq s',
+    '㎩': 'Pa',
+    '㎫': 'MPa',
+    '㎳': 'ms',
+    '㎷': 'mV',
+    '㎸': 'kV',
+    '㎽': 'mW',
+    '㎾': 'kW',
+    '㎿': 'MW',
+    '㏃': 'Bq',
+    '㏄': 'cc',
+    '㏈': 'dB',
+    '㏊': 'hs',
+    '㏏': 'kt',
+    '％': '%',
+    '＆': '&',
+    '＋': '+',
+    '，': ',',
+    '－': '-',
+    '．': '.',
+    '３': '3',
+    '：': ':',
+    '＜': '<',
+    '＞': '>',
+    '？': '?',
+    '～': '~',
+    '｢': '<',
+    '｣': '>',
+    '･': '·',
+    '￡': '£',
+    '￦': '₩',
+    # part 3: highly unlikely/useless by the corpus
+    'ˈ': '',
+    '¨': '',
+    '«': '<',
+    '»': '>',
+    '¬': '-',
+    'ː': ':',
+    '¹': '1',
+    '²': '2',
+    '³': '3',
+    '´': '\'',
+    '¼': '1/4',
+    '¾': '3/4',
+    '÷': '/',
+    'ʻ': '',
+    'ㆍ': '·'
 }
 
-'''
-# TODO complete the following symbol normalization list
-# corpus normalization rules
-- lowercasing for english
-- consecutive space collapsing
-- single/double quote to single quote only
-- non-ascii punctuations into ascii table
-
-˙    
-˜   ~
-˝   "
-̊   ˚
-·   ·
-‐   -
-‑   -
-–   -
-—   -
-―   -
-‘   '
-’   '
-“   "
-”   "
-•   ·
-․   ·
-…   ..
-‧   ·
-‰   %
-′   '
-″   "
-‵   '
-⁄   /
-₁   1
-₂   2
-₃   3
-→   ->
-∕   /
-∙   ·
-∪   U
-∼   ~
-≪   <<
-≫   >>
-ⓛ   (1)
-┃   |
-□   O
-○   o
-★   *
-☆   *
-♥   ♡
-➡   ->
-⟪   <
-⟫   >
-〃   "
-〈   <
-〉   >
-《   <
-》   >
-「   <
-」   >
-『   <
-』   >
-【   <
-】   >
-〔   [
-〕   ]
-〜   ~
-〮
-゜
-・
-㈔
-㈜
-㉦
-㍱
-㎃
-㎈
-㎉
-㎍
-㎎
-㎏
-㎐
-㎑
-㎒
-㎓
-㎔
-㎖
-㎗
-㎘
-㎚
-㎛
-㎜
-㎝
-㎞
-㎟
-㎠
-㎡
-㎢
-㎥
-㎧
-㎨
-㎩
-㎫
-㎳
-㎷
-㎸
-㎽
-㎾
-㎿
-㏃
-㏄
-㏈
-㏊
-㏏
-％
-＆
-＋
-，
-－
-．
-３   3
-：   :
-＜   <
-＞   >
-？   ?
-～   ~
-｢   <
-｣   >
-･   ·
-￡   £
-￦   ₩
-'''
 def main(excel_dir, corpus_dir, ko_corpus_name, en_corpus_name, ko_en_tokens_name):
     rep = dict((re.escape(k), v) for k, v in CHAR_FILTER.items())
     pattern = re.compile('|'.join(rep.keys()))
+    pattern2 = re.compile('[ ]{2,}')  # pattern for consecutive spaces
     exl2df = {}
     for file_name in sorted(os.listdir(excel_dir)):
         if not file_name.endswith('.xlsx'):
@@ -181,8 +188,8 @@ def main(excel_dir, corpus_dir, ko_corpus_name, en_corpus_name, ko_en_tokens_nam
         sys.exit(1)
     ko_outf = open(corpus_dir + '/' + ko_corpus_name, 'wt')
     en_outf = open(corpus_dir + '/' + en_corpus_name, 'wt')
-    ko_outf.write('\n'.join(ko_lines))
-    en_outf.write('\n'.join(en_lines))
+    ko_outf.write(pattern2.sub(' ', ('\n'.join(ko_lines)).lower()))
+    en_outf.write(pattern2.sub(' ', ('\n'.join(en_lines)).lower()))
     ko_outf.close()
     en_outf.close()
     ko_en_tokens = set()
