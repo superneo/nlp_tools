@@ -47,12 +47,17 @@ def main(corpus_dir, ko_corpus_name, en_corpus_name):
     print('(main progress) reading {} & {} done'.format(
         ko_corpus_name, en_corpus_name))
     vocab = collections.defaultdict(int)  # {'_ l o w': 5, '_ f o r': 3, ...}
+    bpe_symbols = set()
     for mono_corpus in [ko_bigram_lists, en_bigram_lists]:
         for sentence_words in mono_corpus:
             for word in sentence_words:
                 vocab[' '.join(list(word))] += 1
+                bpe_symbols.update(word[1:])
     print('(main progress) vocab initialization done')
-    del ko_bigram_lists, en_bigram_lists
+    with open('./BPE_symbols.txt', 'wt') as outf:
+        outf.write('\n'.join(sorted(bpe_symbols)))
+    print('(main progress) BPE symbol dictionary built')
+    del ko_bigram_lists, en_bigram_lists, bpe_symbols
     bpe_codes = {}
     iter_idx = 0
     bigram2cnt = count_bigrams(vocab)  # {('_', 'l'): 9, ('l', 'o'): 7, ...}
@@ -60,8 +65,7 @@ def main(corpus_dir, ko_corpus_name, en_corpus_name):
     try:
         while True:
             bigram2cnt_size = len(bigram2cnt)
-            if ((Init_Bigrams_Size * BPE_Iteration_Ratio) >= bigram2cnt_size) or\
-                (iter_idx == 1000):
+            if ((Init_Bigrams_Size * BPE_Iteration_Ratio) >= bigram2cnt_size):
                 print('[BPE done] BPE merge loop terminated')
                 break
             best_bigram = max(bigram2cnt, key=bigram2cnt.get)
