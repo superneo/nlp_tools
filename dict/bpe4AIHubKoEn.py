@@ -4,11 +4,14 @@
 
 import argparse
 import collections
+import json
 import re
 import sys
+from os.path import isfile
 
 
-BPE_Iteration_Ratio = 0.9
+BPE_ITERATION_RATIO = 0.9
+BPE_MAX_Iteration = 10000
 
 
 def count_bigrams(vocab):
@@ -32,58 +35,78 @@ def merge_vocab(best_bigram, v_in):
 
 
 def main(corpus_dir, ko_corpus_name, en_corpus_name):
-    pat_space = re.compile(' ')
-    ko_inf = open(corpus_dir + '/' + ko_corpus_name, 'rt')
-    en_inf = open(corpus_dir + '/' + en_corpus_name, 'rt')
-    ko_bigram_lists = [['_' + word for word in line.strip().split()]
-                       for line in ko_inf.readlines()]
-    en_bigram_lists = [['_' + word for word in line.strip().split()]
-                       for line in en_inf.readlines()]
-    ko_inf.close()
-    en_inf.close()
-    if len(ko_bigram_lists) != len(en_bigram_lists):
-        print('[ERROR] Ko/En corpora have different number of lines!!!')
-        sys.exit(1)
-    print('(main progress) reading {} & {} done'.format(
-        ko_corpus_name, en_corpus_name))
-    vocab = collections.defaultdict(int)  # {'_ l o w': 5, '_ f o r': 3, ...}
-    bpe_symbols = set()
-    for mono_corpus in [ko_bigram_lists, en_bigram_lists]:
-        for sentence_words in mono_corpus:
-            for word in sentence_words:
-                vocab[' '.join(list(word))] += 1
-                bpe_symbols.update(word[1:])
-    print('(main progress) vocab initialization done')
-    with open('./BPE_symbols.txt', 'wt') as outf:
-        outf.write('\n'.join(sorted(bpe_symbols)))
-    print('(main progress) BPE symbol dictionary built')
-    del ko_bigram_lists, en_bigram_lists, bpe_symbols
-    bpe_codes = {}
-    iter_idx = 0
-    bigram2cnt = count_bigrams(vocab)  # {('_', 'l'): 9, ('l', 'o'): 7, ...}
+    if isfile('./BPE_vocab.json'):
+        with open('./BPE_vocab.json', 'rt') as inf:
+            vocab = collections.defaultdict(int, json.load(inf))
+        print('(main progress) BPE vocab loading done')
+    else:
+        ko_inf = open(corpus_dir + '/' + ko_corpus_name, 'rt')
+        en_inf = open(corpus_dir + '/' + en_corpus_name, 'rt')
+        ko_bigram_lists = [['_' + word for word in line.strip().split()]
+                           for line in ko_inf.readlines()]
+        en_bigram_lists = [['_' + word for word in line.strip().split()]
+                           for line in en_inf.readlines()]
+        ko_inf.close()
+        en_inf.close()
+        if len(ko_bigram_lists) != len(en_bigram_lists):
+            print('[ERROR] Ko/En corpora have different number of lines!!!')
+            sys.exit(1)
+        print('(main progress) reading {} & {} done'.format(
+            ko_corpus_name, en_corpus_name))
+        vocab = collections.defaultdict(int) # {'_ l o w':5, '_ f o r':3, ...}
+        for mono_corpus in [ko_bigram_lists, en_bigram_lists]:
+            for sentence_words in mono_corpus:
+                for word in sentence_words:
+                    vocab[' '.join(list(word))] += 1
+        print('(main progress) BPE vocab initialization done')
+        del ko_bigram_lists, en_bigram_lists
+    if not isfile('./BPE_symbols.txt'):
+        symbols = set()
+        for word in vocab:
+            symbols.update(word.replace(' ', '')[1:])
+        with open('./BPE_symbols.txt', 'wt') as outf:
+            outf.write('\n'.join(sorted(symbols)))
+        print('(main progress) BPE symbol dictionary built')
+        del symbols
+    codes = {}
+    if isfile('./BPE_codes.txt'):
+        with open('./BPE_codes.txt', 'rt') as inf:
+            for line in inf.readlines():
+                tk1, tk2, tk3 = line.strip().split()
+                codes[tk1, tk2] = int(tk3)
+        print('(main progress) BPE codes loading done')
+    iter_idx = len(codes)
+    bigram2cnt = count_bigrams(vocab) # {('_','l'):9, ('l','o'):7, ...}
     Init_Bigrams_Size = len(bigram2cnt)
     try:
         while True:
-            bigram2cnt_size = len(bigram2cnt)
-            if ((Init_Bigrams_Size * BPE_Iteration_Ratio) >= bigram2cnt_size):
+            iter_idx += 1
+            bigram_cnt = len(bigram2cnt)
+            if ((Init_Bigrams_Size * BPE_ITERATION_RATIO) >= bigram_cnt) or\
+                (BPE_MAX_Iteration < iter_idx):
                 print('[BPE done] BPE merge loop terminated')
                 break
             best_bigram = max(bigram2cnt, key=bigram2cnt.get)
-            print('[BPE merge {}] best bigram: {}({}), bigram2cnt size: {}'.format(
-                iter_idx, best_bigram, bigram2cnt[best_bigram], bigram2cnt_size))
             vocab = merge_vocab(best_bigram, vocab)
-            bpe_codes[best_bigram] = iter_idx
-            iter_idx += 1
-            del bigram2cnt
+            codes[best_bigram] = iter_idx
+            print('[BPE merge {}] best bigram: {}/{}, bigram cnt: {}'.format(
+                iter_idx, best_bigram, bigram2cnt[best_bigram], bigram_cnt))
             bigram2cnt = count_bigrams(vocab)
     finally:
+        with open('./BPE_vocab.json', 'wt') as outf:
+            json.dump(vocab, outf, ensure_ascii=False, indent=4)
         with open('./BPE_codes.txt', 'wt') as outf:
-            outf.write('\n'.join(['({}, {})\t{}'.format(k[0], k[1], bpe_codes[k])
-                for k in sorted(bpe_codes, key=bpe_codes.get)]))
+            outf.write('\n'.join(['{}\t{}\t{}'.format(k[0], k[1], codes[k])
+                for k in sorted(codes, key=codes.get)]))
         with open('./bigram2cnt.txt', 'wt') as outf:
-            outf.write('\n'.join(['({}, {})\t{}'.format(k[0], k[1], bigram2cnt[k])
-                for k in sorted(bigram2cnt, key=bigram2cnt.get, reverse=True)]))
-        del bigram2cnt
+            outf.write('\n'.join(
+                ['({}, {})\t{}'.format(k[0], k[1], bigram2cnt[k])
+                 for k in sorted(bigram2cnt, key=bigram2cnt.get,
+                                 reverse=True)]))
+        print('(main progress) BPE vocab/codes/bigram count saved')
+        if len(codes) != iter_idx:
+            # codes: not updated, vocab: not sure if updated or not
+            print('[Warning] vocab and codes may not be in sync')
 
 
 if __name__ == '__main__':
