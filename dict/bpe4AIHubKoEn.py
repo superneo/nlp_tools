@@ -34,11 +34,27 @@ def merge_vocab(best_bigram, v_in):
     return v_out
 
 
+def build_BPE_dict(symbols_path, codes_path):
+    # assume symbols_path and codes_path are valid file paths
+    bpe_dict = {'__UNK__': 0, '__PAD__': 1}
+    offset = 2
+    with open(symbols_path, 'rt') as inf:
+        symbols = sorted([line.strip() for line in inf.readlines()])
+        for i in range(len(symbols)):
+            bpe_dict[symbols[i]] = offset + i
+        offset += len(symbols)
+    with open(codes_path, 'rt') as inf:
+        for i, line in enumerate(inf.readlines()):
+            tk1, tk2, _ = line.split()
+            bpe_dict[tk1 + tk2] = offset + i
+    return bpe_dict
+
+
 def main(corpus_dir, ko_corpus_name, en_corpus_name):
     if isfile('./BPE_vocab.json'):
         with open('./BPE_vocab.json', 'rt') as inf:
             vocab = collections.defaultdict(int, json.load(inf))
-        print('(main progress) BPE vocab loading done')
+        print('(main progress) BPE vocab loaded')
     else:
         ko_inf = open(corpus_dir + '/' + ko_corpus_name, 'rt')
         en_inf = open(corpus_dir + '/' + en_corpus_name, 'rt')
@@ -58,7 +74,7 @@ def main(corpus_dir, ko_corpus_name, en_corpus_name):
             for sentence_words in mono_corpus:
                 for word in sentence_words:
                     vocab[' '.join(list(word))] += 1
-        print('(main progress) BPE vocab initialization done')
+        print('(main progress) BPE vocab initialized')
         del ko_bigram_lists, en_bigram_lists
     if not isfile('./BPE_symbols.txt'):
         symbols = set()
@@ -66,7 +82,7 @@ def main(corpus_dir, ko_corpus_name, en_corpus_name):
             symbols.update(word.replace(' ', '')[1:])
         with open('./BPE_symbols.txt', 'wt') as outf:
             outf.write('\n'.join(sorted(symbols)))
-        print('(main progress) BPE symbol dictionary built')
+        print('(main progress) BPE symbols saved')
         del symbols
     codes = {}
     if isfile('./BPE_codes.txt'):
@@ -74,7 +90,7 @@ def main(corpus_dir, ko_corpus_name, en_corpus_name):
             for line in inf.readlines():
                 tk1, tk2, tk3 = line.strip().split()
                 codes[tk1, tk2] = int(tk3)
-        print('(main progress) BPE codes loading done')
+        print('(main progress) BPE codes loaded')
     iter_idx = len(codes)
     bigram2cnt = count_bigrams(vocab) # {('_','l'):9, ('l','o'):7, ...}
     Init_Bigrams_Size = len(bigram2cnt)
@@ -107,6 +123,10 @@ def main(corpus_dir, ko_corpus_name, en_corpus_name):
         if len(codes) != iter_idx:
             # codes: not updated, vocab: not sure if updated or not
             print('[Warning] vocab and codes may not be in sync')
+        with open('./BPE_dict.json', 'wt') as outf:
+            json.dump(build_BPE_dict('./BPE_symbols.txt', './BPE_codes.txt'),
+                outf, ensure_ascii=False, indent=4)
+        print('(main progress) BPE dictionary built')
 
 
 if __name__ == '__main__':
