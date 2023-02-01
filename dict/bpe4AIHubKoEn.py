@@ -12,6 +12,7 @@ from os.path import isfile
 
 BPE_ITERATION_RATIO = 0.9
 BPE_MAX_Iteration = 10000
+BPE_TMP_FILE_ROOT = './tmp_bpe_files'
 
 
 def count_bigrams(vocab):
@@ -50,9 +51,9 @@ def build_BPE_dict(symbols_path, codes_path):
     return bpe_dict
 
 
-def main(corpus_dir, ko_corpus_name, en_corpus_name):
-    if isfile('./BPE_vocab.json'):
-        with open('./BPE_vocab.json', 'rt') as inf:
+def main(corpus_dir, ko_corpus_name, en_corpus_name, bpe_dict_dir):
+    if isfile(BPE_TMP_FILE_ROOT + '/BPE_vocab.json'):
+        with open(BPE_TMP_FILE_ROOT + '/BPE_vocab.json', 'rt') as inf:
             vocab = collections.defaultdict(int, json.load(inf))
         print('(main progress) BPE vocab loaded')
     else:
@@ -76,17 +77,17 @@ def main(corpus_dir, ko_corpus_name, en_corpus_name):
                     vocab[' '.join(list(word))] += 1
         print('(main progress) BPE vocab initialized')
         del ko_bigram_lists, en_bigram_lists
-    if not isfile('./BPE_symbols.txt'):
+    if not isfile(BPE_TMP_FILE_ROOT + '/BPE_symbols.txt'):
         symbols = set()
         for word in vocab:
             symbols.update(word.replace(' ', '')[1:])
-        with open('./BPE_symbols.txt', 'wt') as outf:
+        with open(BPE_TMP_FILE_ROOT + '/BPE_symbols.txt', 'wt') as outf:
             outf.write('\n'.join(sorted(symbols)))
         print('(main progress) BPE symbols saved')
         del symbols
     codes = {}
-    if isfile('./BPE_codes.txt'):
-        with open('./BPE_codes.txt', 'rt') as inf:
+    if isfile(BPE_TMP_FILE_ROOT + '/BPE_codes.txt'):
+        with open(BPE_TMP_FILE_ROOT + '/BPE_codes.txt', 'rt') as inf:
             for line in inf.readlines():
                 tk1, tk2, tk3 = line.strip().split()
                 codes[tk1, tk2] = int(tk3)
@@ -109,12 +110,12 @@ def main(corpus_dir, ko_corpus_name, en_corpus_name):
                 iter_idx, best_bigram, bigram2cnt[best_bigram], bigram_cnt))
             bigram2cnt = count_bigrams(vocab)
     finally:
-        with open('./BPE_vocab.json', 'wt') as outf:
+        with open(BPE_TMP_FILE_ROOT + '/BPE_vocab.json', 'wt') as outf:
             json.dump(vocab, outf, ensure_ascii=False, indent=4)
-        with open('./BPE_codes.txt', 'wt') as outf:
+        with open(BPE_TMP_FILE_ROOT + '/BPE_codes.txt', 'wt') as outf:
             outf.write('\n'.join(['{}\t{}\t{}'.format(k[0], k[1], codes[k])
                 for k in sorted(codes, key=codes.get)]))
-        with open('./bigram2cnt.txt', 'wt') as outf:
+        with open(BPE_TMP_FILE_ROOT + '/bigram2cnt.txt', 'wt') as outf:
             outf.write('\n'.join(
                 ['({}, {})\t{}'.format(k[0], k[1], bigram2cnt[k])
                  for k in sorted(bigram2cnt, key=bigram2cnt.get,
@@ -123,9 +124,10 @@ def main(corpus_dir, ko_corpus_name, en_corpus_name):
         if len(codes) != iter_idx:
             # codes: not updated, vocab: not sure if updated or not
             print('[Warning] vocab and codes may not be in sync')
-        with open('./BPE_dict.json', 'wt') as outf:
-            json.dump(build_BPE_dict('./BPE_symbols.txt', './BPE_codes.txt'),
-                outf, ensure_ascii=False, indent=4)
+        with open(bpe_dict_dir + '/BPE_dict.json', 'wt') as outf:
+            json.dump(build_BPE_dict(BPE_TMP_FILE_ROOT + '/BPE_symbols.txt',
+                                     BPE_TMP_FILE_ROOT + '/BPE_codes.txt'),
+                      outf, ensure_ascii=False, indent=4)
         print('(main progress) BPE dictionary built')
 
 
@@ -135,10 +137,13 @@ if __name__ == '__main__':
     AP = argparse.ArgumentParser(description='args parser')
     AP.add_argument('-corpus_dir', action='store', required=True,
                     help='path 2 preprocessed Ko/En monolingual corpus files')
+    AP.add_argument('-bpe_dict_dir', action='store', required=True,
+                    help='path to save the BPE dictionary file')
     AP.add_argument('-ko_corpus_name', action='store', default='ko.txt',
                     help='Korean corpus file name')
     AP.add_argument('-en_corpus_name', action='store', default='en.txt',
                     help='English corpus file name')
     ARGS = AP.parse_args()
 
-    main(ARGS.corpus_dir, ARGS.ko_corpus_name, ARGS.en_corpus_name)
+    main(ARGS.corpus_dir, ARGS.ko_corpus_name, ARGS.en_corpus_name,
+         ARGS.bpe_dict_dir)
