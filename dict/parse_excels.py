@@ -9,6 +9,13 @@ import re
 import sys
 
 
+# * text preprocessing steps in order:
+# 1. strip
+# 2. CHAR_FILTER sub
+# 3. lowercasing
+# 4. space collapsing
+
+
 CHAR_FILTER = {
     # part 1: invisible/unprintable characters(mostly)
     '\x7f': '',     # (DEL -> '')
@@ -31,7 +38,7 @@ CHAR_FILTER = {
     '˙': ' ',
     '˜': '~',
     '˝': '"',
-    '\u030a': '',	# (combining ring above -> '')  # '̊': '˚',
+    '̊': '˚',
     '·': '·',
     '‐': '-',
     '‑': '-',
@@ -162,7 +169,8 @@ CHAR_FILTER = {
     'ㆍ': '·'
 }
 
-def main(excel_dir, corpus_dir, ko_corpus_name, en_corpus_name, ko_en_tokens_name):
+def main(excel_dir, corpus_dir, ko_corpus_name, en_corpus_name):
+    # TODO refactoring
     rep = dict((re.escape(k), v) for k, v in CHAR_FILTER.items())
     pattern = re.compile('|'.join(rep.keys()))
     pattern2 = re.compile('[ ]{2,}')  # pattern for consecutive spaces
@@ -192,15 +200,7 @@ def main(excel_dir, corpus_dir, ko_corpus_name, en_corpus_name, ko_en_tokens_nam
     en_outf.write(pattern2.sub(' ', ('\n'.join(en_lines)).lower()))
     ko_outf.close()
     en_outf.close()
-    ko_en_tokens = set()
-    for i in range(len(ko_lines)):
-        ko_en_tokens.update(list(ko_lines[i]))
-        ko_en_tokens.update(list(en_lines[i]))
-    with open(corpus_dir + '/' + ko_en_tokens_name, 'wt') as ko_en_outf:
-        ko_en_outf.write(
-            '\n'.join([token for token in sorted(ko_en_tokens)
-                       if token not in ['', '\n']]))
-    del exl2df, ko_lines, en_lines, ko_en_tokens
+    del exl2df, ko_lines, en_lines
 
 
 if __name__ == '__main__':
@@ -215,10 +215,7 @@ if __name__ == '__main__':
                     help='Korean corpus file name')
     AP.add_argument('-en_corpus_name', action='store', default='en.txt',
                     help='English corpus file name')
-    AP.add_argument('-ko_en_tokens_name', action='store',
-                    default='ko_en_tokens.txt',
-                    help='Korean/English token file name')
     ARGS = AP.parse_args()
 
     main(ARGS.excel_dir, ARGS.corpus_dir, ARGS.ko_corpus_name,
-         ARGS.en_corpus_name, ARGS.ko_en_tokens_name)
+         ARGS.en_corpus_name)
